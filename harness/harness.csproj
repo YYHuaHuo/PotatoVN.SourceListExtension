@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    离线验证 harness：不装进 PotatoVN，直接跑插件的补丁代码。
+
+    关键点：WinUI 的 ContentDialog 在控制台里没法实例化（需要 WindowsAppSDK 运行时 + UI 线程），
+    所以这里造一个**同形状的假弹窗** MockDialog：成员名与签名照抄宿主 1.10.2 的
+    ConfirmGalInfoDialog（含私有字段 _originalIds/_originalName 等），
+    然后把真正的补丁打到它身上、真的 new 出来、真的跑一遍 Update / FetchInfo，
+    以此验证「补丁能装上 + 装上之后插件源不会越界 + id 落到 IdForPlugins」。
+
+    它编译的是**兄弟目录那份插件源码**，所以验的就是要装进 PotatoVN 的那份代码。
+
+    跑法（本目录下）：
+      dotnet build -c Debug -p:RuntimeIdentifiers=win-x64
+      dotnet bin\Debug\net8.0-windows10.0.22621.0\sourcelist-harness.dll
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>sourcelist-harness</AssemblyName>
+    <RootNamespace>SourceListHarness</RootNamespace>
+    <NoWarn>$(NoWarn);NU1902;CA1416;CS8632;MVVMTK0045</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 与插件 csproj 保持同一套：基库 + WindowsAppSDK + Harmony（补丁本身要用） -->
+    <ProjectReference Include="..\..\PotatoVN\GalgameManager.WinApp.Base\GalgameManager.WinApp.Base.csproj" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.1.3" />
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 插件源码本身（单一真相来源，就在上一级） -->
+    <Compile Include="..\Plugin.cs" />
+    <Compile Include="..\DialogPatch.cs" />
+    <Compile Include="..\PatchBodies.cs" />
+    <Compile Include="..\SourceListProvider.cs" />
+    <Compile Include="..\SourceNamePatch.cs" />
+    <Compile Include="..\IdRouter.cs" />
+  </ItemGroup>
+
+</Project>
